@@ -538,9 +538,20 @@ Compute and store the Bk matrices for the mesh.
 - `ak::Matrix{Float64}`: The ak matrices.
 """
 function get_Bk!(mesh::Mesh)
-    ###########################################################################
-    ####################### PUT YOUR CODE HERE ################################
-    ###########################################################################
+    num_triangles = size(mesh.T, 2)
+    Bk = zeros(2,2,num_triangles)
+    ak = zeros(2,num_triangles)
+
+    for j=1:num_triangles
+        Bk[:,1,j] = p[:,T[2,j]] - p[:,T[1,j]]
+        Bk[:,2,j] = p[:,T[3,j]] - p[:,T[1,j]]
+        ak[:,j] = p[:,T[1,j]]
+    end
+
+    mesh.Bk = Bk
+    mesh.ak = ak
+    
+    return Bk, ak
 end
 
 """
@@ -555,7 +566,14 @@ Compute and store the determinants of the Bk matrices for the mesh.
 - `detBk::Vector{Float64}`: The determinants of the Bk matrices.
 """
 function get_detBk!(mesh::Mesh)
-    ###########################################################################
-    ####################### PUT YOUR CODE HERE ################################
-    ###########################################################################
+    num_triangles = size(mesh.T, 2)
+    detBk = zeros(num_triangles)
+
+    for j=1:num_triangles
+        detBk[j] = det(mesh.Bk[:,:,j])
+    end
+
+    mesh.detBk = detBk
+    
+    return detBk
 end
