@@ -13,9 +13,10 @@ A structure representing a triangular quadrature rule.
 - `weights::Array`: The quadrature weights.
 """
 struct TriQuad
-    ###########################################################################
-    ####################### PUT YOUR CODE HERE ################################
-    ###########################################################################
+    name::String
+    order::Integer
+    points::Matrix
+    weights::Array
 end
 
 ###########################################################################
