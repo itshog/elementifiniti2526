@@ -551,7 +551,7 @@ function get_Bk!(mesh::Mesh)
     mesh.Bk = Bk
     mesh.ak = ak
     
-    return Bk, ak
+    return mesh.Bk, mesh.ak
 end
 
 """
