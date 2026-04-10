@@ -543,9 +543,9 @@ function get_Bk!(mesh::Mesh)
     ak = zeros(2,num_triangles)
 
     for j=1:num_triangles
-        Bk[:,1,j] = p[:,T[2,j]] - p[:,T[1,j]]
-        Bk[:,2,j] = p[:,T[3,j]] - p[:,T[1,j]]
-        ak[:,j] = p[:,T[1,j]]
+        Bk[:,1,j] = mesh.p[:,mesh.T[2,j]] - mesh.p[:,mesh.T[1,j]]
+        Bk[:,2,j] = mesh.p[:,mesh.T[3,j]] - mesh.p[:,mesh.T[1,j]]
+        ak[:,j] = mesh.p[:,mesh.T[1,j]]
     end
 
     mesh.Bk = Bk

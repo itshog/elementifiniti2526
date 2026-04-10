@@ -22,8 +22,8 @@ end
 ###########################################################################
 ####################### PUT YOUR CODE HERE ################################
 ###########################################################################
-# Q0_ref = ...
-# Q1_ref = ...
+Q0_ref = TriQuad("Q0", 1, reshape([1/3; 1/3], 2, 1), [1])
+Q1_ref = TriQuad("Q1", 1, [0 1 0; 0 0 1], [1/3 1/3 1/3])
 # Q2_ref = ...
 
 """
@@ -40,9 +40,21 @@ Perform numerical integration of a function over a mesh using a given quadrature
 - `I_approx::Float64`: The approximate integral of the function over the mesh.
 """
 function Quadrature(u, mesh::Mesh, ref_quad::TriQuad)
-    ###########################################################################
-    ####################### PUT YOUR CODE HERE ################################
-    ###########################################################################
+    num_triangles = size(mesh.T, 2)
+    q = size(ref_quad.weights, 2)
+    I = 0
+    get_Bk!(mesh)
+    get_detBk!(mesh)
+    for j=1:num_triangles
+        p = similar(ref_quad.points)
+        values = zeros(q)
+        for k=1:q
+            p[:,k] = mesh.Bk[:,:,j] * ref_quad.points[:,k] + mesh.ak[:,j]
+            values[k] = u(p[:,k])
+        end
+        I += abs(mesh.detBk[j]) * dot(ref_quad.weights, values)
+    end
+    return I
 end
 
 # Evaluation of a function

@@ -28,15 +28,15 @@ begin
         T, p = get_nodes_connectivity(out_file)
         mesh = Mesh(T, p)
         # Compute the integral
-        Q0_approx[i] = Quadrature(u, mesh, Q0_ref)
+        # Q0_approx[i] = Quadrature(u, mesh, Q0_ref)
         Q1_approx[i] = Quadrature(u, mesh, Q1_ref)
-        Q2_approx[i] = Quadrature(u, mesh, Q2_ref)
+        # Q2_approx[i] = Quadrature(u, mesh, Q2_ref)
     end
 end
 
 # Plotting
 begin
-    plt = plot(mesh_sizes, abs.(Q0_approx .- I_exact), xaxis=:log, yaxis=:log, label=L"$Q_0$", marker=:circle)
+    # plt = plot(mesh_sizes, abs.(Q0_approx .- I_exact), xaxis=:log, yaxis=:log, label=L"$Q_0$", marker=:circle)
     plot!(mesh_sizes, abs.(Q1_approx .- I_exact), xaxis=:log, yaxis=:log, label=L"$Q_1$", marker=:rect)
     plot!(mesh_sizes, abs.(Q2_approx .- I_exact), xaxis=:log, yaxis=:log, label=L"$Q_2$", marker=:diamond)
     plot!(mesh_sizes, mesh_sizes .^ 2, xaxis=:log, yaxis=:log, linestyle=:dash, label=L"$\mathcal{O}(h^2)$")
