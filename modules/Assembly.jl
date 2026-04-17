@@ -54,10 +54,15 @@ Compute the shape functions for the Poisson problem.
 # Returns
 - `shapef`: The shape functions evaluated at the quadrature points.
 """
-@memoize function shapef_2DLFE(quadrule::TriQuad)
-    ###########################################################################
-    ############################ ADD CODE HERE ################################
-    ########################################################################### 
+function shapef_2DLFE(quadrule::TriQuad)
+    q = size(quadrule.points, 2)
+    values = zeros(3,q)
+
+    values[1,:] = 1 - quadrule.points[1,:] - quadrule.points[2,:]
+    values[2,:] = quadrule.points[1,:]
+    values[3,:] = quadrule.points[2,:]
+
+    return values
 end
 
 """
@@ -71,10 +76,7 @@ Compute the gradients of the shape functions for the Poisson problem.
 # Returns
 - `∇shapef`: The gradients of the shape functions evaluated at the quadrature points.
 """
-@memoize function ∇shapef_2DLFE(quadrule::TriQuad)
-    ###########################################################################
-    ############################ ADD CODE HERE ################################
-    ########################################################################### 
+function ∇shapef_2DLFE(quadrule::TriQuad)
 end
 
 """
