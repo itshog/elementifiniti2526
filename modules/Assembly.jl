@@ -77,6 +77,11 @@ Compute the gradients of the shape functions for the Poisson problem.
 - `∇shapef`: The gradients of the shape functions evaluated at the quadrature points.
 """
 function ∇shapef_2DLFE(quadrule::TriQuad)
+    q = size(quadrule.points, 2)
+    A = [-1 1 0; -1 0 1]
+    values = repeat(A, outer = [1,1,q])
+
+    return values
 end
 
 """
