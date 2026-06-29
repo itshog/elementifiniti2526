@@ -43,6 +43,7 @@ function assemble_global(mesh::Mesh, local_assembler!)
     # Allocate global force vector f
     f = zeros(n_dofs)
     # Allocate entries for assembling the global matrix as a sparse matrix
+    # 9 perché ogni triangolo ha 3 vertici su cui vengono valutate 3 funzioni di base
     I = zeros(9 * n_tri) # Row indices
     J = zeros(9 * n_tri) # Col indices
     K = zeros(9 * n_tri) # Entries
@@ -52,7 +53,7 @@ function assemble_global(mesh::Mesh, local_assembler!)
         # Assemble the local matrices
         local_assembler!(Ke, fe, mesh, cell_index)
         # Get the local-to-global indices
-        triangle = mesh.T[:, cell_index]
+        triangle = mesh.T[:, cell_index] # Vettore di lunghezza 3 che contiene gli indici GLOBALI dei vertici del triangolo su cui sto lavorando
         # Add the local contribution to the global force vector
         f[triangle] += fe
         # Add the local contribution to the vectors of the assembly of the global stiffness matrix
@@ -175,13 +176,26 @@ function poisson_assemble_local!(Ke::Matrix, fe::Vector, mesh::Mesh, cell_index:
     fill!(Ke, 0)
     fill!(fe, 0)
     # FIXME: It is sufficient to use Q0 quadrule to assemble the stiffness matrix exactly,
-    # but here we show how to use a more general quadrature rule like Q2    
+    # but here we show how to use a more general quadrature rule like Q2
     quadrule = Q2_ref
     points_e = mesh.Bk[:, :, cell_index] * quadrule.points .+ mesh.ak[:, cell_index]
     # Evaluate basis functions and their gradient
-    shapef = shapef_2DLFE(quadrule)
-    invBk = mesh.invBk[:, :, cell_index]
-    ∇shapef = mapslices(x -> invBk' * x, ∇shapef_2DLFE(quadrule), dims=(1, 2))
+    shapef = shapef_2DLFE(quadrule) # n_basefuncs x q
+    invBk = mesh.invBk[:, :, cell_index] # Matrice 2x2
+
+    # Funzione anonima applicata ai gradienti sull'elemento di base per
+    # ottenere i gradienti reali, dims=(1,2) serve per "impilare" lungo una
+    # terza direzione le matrici formate dalle prime due
+    # ∇shapef = mapslices(x -> invBk' * x, ∇shapef_2DLFE(quadrule), dims=(1, 2))
+
+    # Equivalentemente (e forse più leggibile e performante)
+    ∇ref = ∇shapef_2DLFE(quadrule) # I 3 gradienti sull'elemento di riferimento, 2x3xq con q numero punti di quadratura
+    ∇shapef = similar(∇ref)
+
+    for q in axes(∇ref,3)
+        ∇shapef[:,:,q] = invBk' * ∇ref[:,:,q]
+    end
+
     # Loop over quadrature points
     for (q_index, q_point) in enumerate(eachcol(points_e))
         # Get the quadrature weight
