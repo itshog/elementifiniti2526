@@ -244,9 +244,52 @@ Assemble the local stiffness matrix and force vector for the transport problem.
 - `fe`: The assembled local force vector.
 """
 function transport_assemble_local!(Ke::Matrix, fe::Vector, mesh::Mesh, cell_index::Integer, f, k, β; stab = nothing, δ = 0.5)
-    ###########################################################################
-    ############################ ADD CODE HERE ################################
-    ########################################################################### 
+    n_basefuncs = 3
+    # Reset to 0
+    fill!(Ke, 0)
+    fill!(fe, 0)
+    # Quadratura Q2 sia per la matrice che per il vettore
+    quadrule = Q2_ref
+    points_e = mesh.Bk[:, :, cell_index] * quadrule.points .+ mesh.ak[:, cell_index]
+    # Evaluate basis functions and their gradient
+    shapef = shapef_2DLFE(quadrule) # n_basefuncs x q
+    invBk = mesh.invBk[:, :, cell_index] # Matrice 2x2
+
+    # Funzione anonima applicata ai gradienti sull'elemento di base per
+    # ottenere i gradienti reali, dims=(1,2) serve per "impilare" lungo una
+    # terza direzione le matrici formate dalle prime due
+    # ∇shapef = mapslices(x -> invBk' * x, ∇shapef_2DLFE(quadrule), dims=(1, 2))
+
+    # Equivalentemente (e forse più leggibile e performante)
+    ∇ref = ∇shapef_2DLFE(quadrule) # I 3 gradienti sull'elemento di riferimento, 2x3xq con q numero punti di quadratura
+    ∇shapef = similar(∇ref)
+
+    for q in axes(∇ref,3)
+        ∇shapef[:,:,q] = invBk' * ∇ref[:,:,q]
+    end
+
+    # Loop over quadrature points
+    for (q_index, q_point) in enumerate(eachcol(points_e))
+        # Get the quadrature weight
+        dΩ = quadrule.weights[q_index] * mesh.detBk[cell_index]
+        f_eval = f(q_point)
+        k_eval = k(q_point)
+        β_eval = β(q_point)
+        # Loop over test shape functions
+        for i in 1:n_basefuncs
+            v = shapef[i, q_index]
+            ∇v = ∇shapef[:, i, q_index]
+            # Add contribution to fe
+            fe[i] += f_eval * v * dΩ
+            # Loop over trial shape functions
+            for j in 1:n_basefuncs
+                ∇u = ∇shapef[:, j, q_index]
+                # Add contribution to Ke
+                Ke[i, j] += (∇v ⋅ (k_eval * ∇u)) * dΩ + (β_eval ⋅ ∇u) * v * dΩ
+            end
+        end
+    end
+    return Ke, fe
 end
 
 ########################### DARCY PROBLEM ###########################
