@@ -268,13 +268,25 @@ function transport_assemble_local!(Ke::Matrix, fe::Vector, mesh::Mesh, cell_inde
         ∇shapef[:,:,q] = invBk' * ∇ref[:,:,q]
     end
 
+    use_ncad = (stab == "ncad")
+    k_ncad = 0.0
+
+    if use_ncad # Non consistent artificial diffusion
+        lengths = [mesh.Bk[:,1,cell_index], mesh.Bk[:,2,cell_index], mesh.Bk[:,1,cell_index] - mesh.Bk[:,2,cell_index]]
+        h = maximum(norm.(lengths))
+        β_norm = maximum(norm(β(p), Inf) for p in eachcol(points_e))
+        k_ncad = 0.5 * β_norm * h
+    end
+
     # Loop over quadrature points
     for (q_index, q_point) in enumerate(eachcol(points_e))
         # Get the quadrature weight
         dΩ = quadrule.weights[q_index] * mesh.detBk[cell_index]
         f_eval = f(q_point)
-        k_eval = k(q_point)
         β_eval = β(q_point)
+
+        k_eval = use_ncad ? k_ncad : k(q_point)
+
         # Loop over test shape functions
         for i in 1:n_basefuncs
             v = shapef[i, q_index]
