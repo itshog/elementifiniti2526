@@ -20,7 +20,7 @@ begin
 f(x) = 1.0
 u_exact(x) = 0.25 - 0.25 * (x[1]^2 + x[2]^2)
 ∇u_exact(x) = [-0.5 * x[1], -0.5 * x[2]]
-g = u_exact
+g = u_exact # Sul bordo u_exact fa 0
 end
 
 begin
@@ -40,7 +40,7 @@ for (i, h) in enumerate(msh_sizes)
     set_dirichletdofs!(msh, bnd_tags)
 
     # Assemble the system
-    initialize_assembly!(msh)
+    initialize_assembly!(msh) # Calcola Bk detBk e invBk per la mesh
     local_assembler(Ke, fe, msh, cell_index) = poisson_assemble_local!(Ke, fe, msh, cell_index, f)
     A, b = assemble_global(msh, local_assembler)
     # Condense system imposing Dirichlet BCs

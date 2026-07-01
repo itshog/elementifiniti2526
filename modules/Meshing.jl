@@ -471,7 +471,10 @@ Set the Dirichlet degrees of freedom in the mesh.
 """
 function set_dirichletdofs!(mesh::Mesh, dirichletdofs::Array{TT} where {TT<:Integer})
     mesh.dirichletdofs = dirichletdofs
+    # Differenza insiemistica, prende gli indici di tutti i nodi (da 1 a ndofs)
+    # e toglie gli indici dei nodi di bordo
     mesh.freedofs = setdiff(1:get_ndofs(mesh), dirichletdofs)
+    # Nonostante il nome della funzione settiamo anche i nodi liberi
     return nothing
 end
 

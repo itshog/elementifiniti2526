@@ -88,14 +88,19 @@ Impose Dirichlet boundary conditions on the system.
 function impose_dirichlet(A, b, g, mesh)
     # Get tags of dirichlet dofs and free dofs
     ndofs = get_ndofs(mesh)
+    # Seleziona gli indici dei nodi liberi (F) e dei nodi di bordo (D)
     freedofs, dirichletdofs = get_freedofs(mesh), get_dirichletdofs(mesh)
     # Impose Dirichlet BCs by lifting
     uh = zeros(ndofs)
     uh[dirichletdofs] = dropdims(mapslices(g, mesh.p[:, dirichletdofs]; dims=1); dims=1)
+    # Equivalentemente
+    # uh[dirichletdofs] = [g(mesh.p[:, i]) for i in dirichletdofs]
     # Modify the system to include Dirichlet BCs
     A_cond = A[freedofs, freedofs]
     b_cond = b[freedofs] - A[freedofs, dirichletdofs] * uh[dirichletdofs]
 
+    # Ritorniamo la matrice A[F,F] e il vettore b[F]-A[F,D]u[D]
+    # Notare che in questa fase per uh abbiamo già riempito correttamente gli indici D, mancano gli F
     return A_cond, b_cond, uh
 end
 
