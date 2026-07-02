@@ -76,10 +76,25 @@ The function is memoized to cache results for repeated calls with the same quadr
 """
 # FIXME: PUT MEMOIZE BACK AFTER IMPLEMENTATION
 # @memoize function shapef_2D_RT0FE(quadrule::TriQuad)
-function shapef_2D_RT0FE(quadrule::TriQuad)
-    ###########################################################################
-    ############################ ADD CODE HERE ################################
-    ########################################################################### 
+@memoize function shapef_2D_RT0FE(quadrule::TriQuad)
+    points = quadrule.points
+    num_poins = size(points, 2)
+
+    x = points[1,:]
+    y = points[2,:]
+
+    shapef = zeros(2,3,num_poins)
+
+    shapef[1,1,:] .= x
+    shapef[2,1,:] .= y .- 1
+
+    shapef[1,2,:] .= x
+    shapef[2,2,:] .= y
+
+    shapef[1,3,:] .= x .- 1
+    shapef[2,3,:] .= y
+
+    return shapef
 end
 
 
