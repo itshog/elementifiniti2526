@@ -152,9 +152,63 @@ This function computes the local contributions to the global system for the mixe
 """
 ########################### DARCY PROBLEM ###########################
 function darcy_assemble_local_mixed!(Ae::Matrix, Be::Matrix, fe::Vector, mesh::Mesh, cell_index::Integer, f, μ)
-    ###########################################################################
-    ############################ ADD CODE HERE ################################
-    ########################################################################### 
+    # Numero funzioni di base
+    n_basefuncs = 3
+
+    # Reset to 0
+    fill!(Ae, 0)
+    fill!(Be, 0)
+    fill!(fe, 0)
+
+    # Regola di quadratura Q2 (esatta sulle funzioni quadratiche)
+    quadrule = Q2_ref
+
+    # Punti di quadratura sull'elemento reale
+    points_e = mesh.Bk[:, :, cell_index] * quadrule.points .+ mesh.ak[:, cell_index]
+
+    # Evaluate basis functions and their div
+    shapef = shapef_2D_RT0FE(quadrule)          # 2 x n_basefuncs x q (q numero punti di quadratura)
+    divshapef = divshapef_2D_RT0FE(quadrule)    # 1 x n_basefuncs x q
+
+    # Matrice inversa e determinante
+    Bk = mesh.Bk[:, :, cell_index] # Matrice 2x2
+    detBk = mesh.detBk[cell_index]
+
+    # Orientazioni
+    orientation = mesh.elems2orientation[:,cell_index]
+
+    # Loop sui punti di quadratura (q_point è un punto di quadratura sull'elemento reale)
+    for (q_index, q_point) in enumerate(eachcol(points_e))
+        # Get the quadrature weight
+        dΩ = quadrule.weights[q_index] * detBk
+
+        # Valutazioni nei punti di quadratura reali
+        f_eval = f(q_point)
+        μ_eval = μ(q_point)
+
+        # Load vector locale (sul singolo triangolo)
+        fe[1] += f_eval * dΩ
+
+        # Loop sulle funzioni di test (v)
+        for i in 1:n_basefuncs
+            v_ref = shapef[:, i, q_index]
+            div_v_ref = divshapef[1, i, q_index]
+
+            v = orientation[i] / detBk * Bk * v_ref
+            div_v = orientation[i] / detBk * div_v_ref
+
+            Be[1,i] += - div_v * dΩ
+
+            # Loop sulle funzioni di trial (u)
+            for j in 1:n_basefuncs
+                u_ref = shapef[:, j, q_index]
+                u = orientation[j] / detBk * Bk * u_ref
+                Ae[i, j] += μ_eval * (u ⋅ v) * dΩ
+            end
+        end
+    end
+
+    return Ae, Be, fe
 end
 
 
