@@ -1,7 +1,7 @@
 # Author: Ivan Bioli (https://github.com/IvanBioli)
 begin
     import Pkg
-    Pkg.activate("elementifinitiunipv_pkg")
+    # Pkg.activate("elementifinitiunipv_pkg")
     using Revise
 
     # Load the necessary files
@@ -52,7 +52,7 @@ savefig(plt, "./figures_julia/ex07_2SG_solution_flat.pdf") # Save plot
 
 plt = plot_surf(msh, uh; plot_msh = false)
 PlotlyJS.savefig(plt, "./figures_julia/ex07_2SG_solution_surf.pdf")
-display(plt) # Save plot
+# display(plt) # Save plot
 end
 
 ##### NCAD STABILIZATION #####
@@ -70,7 +70,7 @@ savefig(plt, "./figures_julia/ex07_2NCAD_solution_flat.pdf") # Save plot
 
 plt = plot_surf(msh, uh; plot_msh = false)
 PlotlyJS.savefig(plt, "./figures_julia/ex07_2NCAD_solution_surf.pdf")
-display(plt) # Save plot
+# display(plt) # Save plot
 end
 
 ##### NCSD STABILIZATION #####
@@ -88,7 +88,7 @@ savefig(plt, "./figures_julia/ex07_2NCSD_solution_flat.pdf") # Save plot
 
 plt = plot_surf(msh, uh; plot_msh = false)
 PlotlyJS.savefig(plt, "./figures_julia/ex07_2NCSD_solution_surf.pdf")
-display(plt) # Save plot
+# display(plt) # Save plot
 end
 
 ##### SUPG STABILIZATION #####
@@ -106,5 +106,5 @@ savefig(plt, "./figures_julia/ex07_2SUPG_solution_flat.pdf") # Save plot
 
 plt = plot_surf(msh, uh; plot_msh = false)
 PlotlyJS.savefig(plt, "./figures_julia/ex07_2SUPG_solution_surf.pdf")
-display(plt) # Save plot
+# display(plt) # Save plot
 end
