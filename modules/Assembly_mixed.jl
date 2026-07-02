@@ -43,9 +43,46 @@ Assembles the global mixed finite element system matrices and right-hand side ve
 - `b`: The global right-hand side vector, concatenating zeros for velocity DOFs and the assembled force vector for pressure DOFs.
 """
 function assemble_global_mixed(mesh::Mesh, local_assembler!)
-    ###########################################################################
-    ############################ ADD CODE HERE ################################
-    ########################################################################### 
+    # Numero di funzioni di base, triangoli e lati totali
+    n_basefuncs = 3
+    n_tri = get_ntri(mesh)
+    n_edges = size(mesh.edges2nodes, 2)
+
+    # Inizializza a zero le matrici e il vettore locali
+    Ae = zeros(n_basefuncs, n_basefuncs)
+    Be = zeros(1, n_basefuncs)
+    fe = zeros(1)
+
+    # Vettore globale f
+    f = zeros(n_tri)
+
+    # Matrici globali
+    A = zeros(n_edges, n_edges)
+    B = zeros(n_tri, n_edges)
+    
+    # Loop sui triangoli
+    for cell_index in 1:n_tri
+        # Assembla matrici e vettori locali
+        local_assembler!(Ae, Be, fe, mesh, cell_index)
+
+        # Get the local-to-global indices
+        index_of_edges = mesh.elems2edges[:, cell_index]
+
+        # Contributo locale a f
+        f[cell_index] += fe[1]
+
+        # Contributo locale a B
+        B[cell_index, index_of_edges] += vec(Be)
+
+        # Contributo locale ad A
+        A[index_of_edges, index_of_edges] += Ae
+    end
+
+    # Assembla la matrice e il vettore a blocchi
+    K = [A B'; B zeros(n_tri, n_tri)]
+    b = [zeros(n_edges); f]
+
+    return K, b
 end
 
 
