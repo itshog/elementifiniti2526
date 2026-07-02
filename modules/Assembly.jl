@@ -255,11 +255,6 @@ function transport_assemble_local!(Ke::Matrix, fe::Vector, mesh::Mesh, cell_inde
     shapef = shapef_2DLFE(quadrule) # n_basefuncs x q
     invBk = mesh.invBk[:, :, cell_index] # Matrice 2x2
 
-    # Funzione anonima applicata ai gradienti sull'elemento di base per
-    # ottenere i gradienti reali, dims=(1,2) serve per "impilare" lungo una
-    # terza direzione le matrici formate dalle prime due
-    # ∇shapef = mapslices(x -> invBk' * x, ∇shapef_2DLFE(quadrule), dims=(1, 2))
-
     # Equivalentemente (e forse più leggibile e performante)
     ∇ref = ∇shapef_2DLFE(quadrule) # I 3 gradienti sull'elemento di riferimento, 2x3xq con q numero punti di quadratura
     ∇shapef = similar(∇ref)
@@ -268,14 +263,28 @@ function transport_assemble_local!(Ke::Matrix, fe::Vector, mesh::Mesh, cell_inde
         ∇shapef[:,:,q] = invBk' * ∇ref[:,:,q]
     end
 
-    use_ncad = (stab == "ncad")
-    k_ncad = 0.0
+    use_ncad = (stab == "NCAD")
+    use_ncsd = (stab == "NCSD")
+    use_supg = (stab == "SUPG")
 
-    if use_ncad # Non consistent artificial diffusion
+    k_art = 0.0
+    tau = 0.0
+
+    # Calcolo del parametro di diffusione artificiale
+    if stab != nothing
         lengths = [mesh.Bk[:,1,cell_index], mesh.Bk[:,2,cell_index], mesh.Bk[:,1,cell_index] - mesh.Bk[:,2,cell_index]]
         h = maximum(norm.(lengths))
-        β_norm = maximum(norm(β(p), Inf) for p in eachcol(points_e))
-        k_ncad = 0.5 * β_norm * h
+        β_norm = maximum(norm(β(p), 2) for p in eachcol(points_e))
+        k_art = 0.5 * β_norm * h
+
+        if use_supg
+            if β_norm > 1e-12
+                tau = δ * h / β_norm
+            else
+                tau = 0.0
+            end
+        end
+
     end
 
     # Loop over quadrature points
@@ -284,20 +293,45 @@ function transport_assemble_local!(Ke::Matrix, fe::Vector, mesh::Mesh, cell_inde
         dΩ = quadrule.weights[q_index] * mesh.detBk[cell_index]
         f_eval = f(q_point)
         β_eval = β(q_point)
+        if use_ncsd
+            β_norm_eval = norm(β_eval, 2)
+            if β_norm_eval > 1e-12
+                β_dir_eval = β_eval ./ β_norm_eval
+            else
+                β_dir_eval = zero(β_eval)
+            end
+        end
 
-        k_eval = use_ncad ? k_ncad : k(q_point)
 
-        # Loop over test shape functions
+        if use_ncad
+            k_eval = k_art
+        else
+            k_eval = k(q_point)
+        end
+
+        # Loop over test (v) shape functions
         for i in 1:n_basefuncs
             v = shapef[i, q_index]
-            ∇v = ∇shapef[:, i, q_index]
+            @views ∇v = ∇shapef[:, i, q_index]
             # Add contribution to fe
             fe[i] += f_eval * v * dΩ
-            # Loop over trial shape functions
+
+            # Modifica il load vector nel caso di stabilizzazione supg
+            if use_supg
+                fe[i] += tau * f_eval * (β_eval ⋅ ∇v) * dΩ
+            end
+
+            # Loop over trial (u) shape functions
             for j in 1:n_basefuncs
-                ∇u = ∇shapef[:, j, q_index]
+                @views ∇u = ∇shapef[:, j, q_index]
                 # Add contribution to Ke
-                Ke[i, j] += (∇v ⋅ (k_eval * ∇u)) * dΩ + (β_eval ⋅ ∇u) * v * dΩ
+                Ke[i, j] += (∇v ⋅ ∇u) * k_eval * dΩ + (β_eval ⋅ ∇u) * v * dΩ
+                if use_ncsd
+                    Ke[i, j] += k_art * (β_dir_eval ⋅ ∇v) * (β_dir_eval ⋅ ∇u) * dΩ
+                end
+                if use_supg
+                    Ke[i, j] += tau * (β_eval ⋅ ∇u) * (β_eval ⋅ ∇v) * dΩ
+                end
             end
         end
     end
