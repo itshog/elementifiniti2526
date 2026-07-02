@@ -78,12 +78,12 @@ The function is memoized to cache results for repeated calls with the same quadr
 # @memoize function shapef_2D_RT0FE(quadrule::TriQuad)
 @memoize function shapef_2D_RT0FE(quadrule::TriQuad)
     points = quadrule.points
-    num_poins = size(points, 2)
+    num_points = size(points, 2)
 
     x = points[1,:]
     y = points[2,:]
 
-    shapef = zeros(2,3,num_poins)
+    shapef = zeros(2,3,num_points)
 
     shapef[1,1,:] .= x
     shapef[2,1,:] .= y .- 1
@@ -119,10 +119,10 @@ Compute the divergence of the Raviart-Thomas RT0 vector-valued basis functions o
 """
 # FIXME: PUT MEMOIZE BACK AFTER IMPLEMENTATION
 # @memoize function divshapef_2D_RT0FE(quadrule::TriQuad)
-function divshapef_2D_RT0FE(quadrule::TriQuad)
-    ###########################################################################
-    ############################ ADD CODE HERE ################################
-    ########################################################################### 
+@memoize function divshapef_2D_RT0FE(quadrule::TriQuad)
+    num_points = size(quadrule.points, 2)
+    divshapef = fill(2.0, 1, 3, num_points)
+    return divshapef
 end
 
 """
