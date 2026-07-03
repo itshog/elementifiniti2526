@@ -57,8 +57,8 @@ function assemble_global_mixed(mesh::Mesh, local_assembler!)
     f = zeros(n_tri)
 
     # Matrici globali
-    A = zeros(n_edges, n_edges)
-    B = zeros(n_tri, n_edges)
+    A = spzeros(n_edges, n_edges)
+    B = spzeros(n_tri, n_edges)
     
     # Loop sui triangoli
     for cell_index in 1:n_tri
@@ -79,7 +79,7 @@ function assemble_global_mixed(mesh::Mesh, local_assembler!)
     end
 
     # Assembla la matrice e il vettore a blocchi
-    K = [A B'; B zeros(n_tri, n_tri)]
+    K = [A B'; B spzeros(n_tri, n_tri)]
     b = [zeros(n_edges); f]
 
     return K, b
@@ -265,9 +265,20 @@ Compute the L² error between an exact function `p` and its discrete approximati
 - `Float64`: The computed L² error over the mesh.
 """
 function L2error_mixed_p(p::Function, ph::Vector, mesh::Mesh, ref_quad::TriQuad)
-    ###########################################################################
-    ############################ ADD CODE HERE ################################
-    ########################################################################### 
+    n_tri = get_ntri(mesh)
+    Bk = mesh.Bk
+    ak = mesh.ak
+    detBk = mesh.detBk
+    points_ref, weights_ref = ref_quad.points, ref_quad.weights
+
+    I = 0.0
+    for i=1:n_tri
+        points = Bk[:, :, i] * points_ref .+ ak[:, i] # Punti di quadratura sull'elemento reale
+        evals = ([p(point) for point in eachcol(points)] .- ph[i]).^2
+        I += sum(evals .* weights_ref) * abs(detBk[i])
+    end
+
+    return sqrt(I)
 end
 
 """
@@ -287,7 +298,64 @@ for a mixed finite element method using Raviart-Thomas (RT0) elements on a trian
 - `Float64`: The combined H(div) error norm, i.e., `sqrt(∫|u - uh|^2) + sqrt(∫|divu - div(uh)|^2)` over the domain.
 """
 function H1diverror_mixed_u(u::Function, divu::Function, uh::Vector, mesh::Mesh, ref_quad::TriQuad)
-    ###########################################################################
-    ############################ ADD CODE HERE ################################
-    ########################################################################### 
+    n_tri = get_ntri(mesh)
+    Bk = mesh.Bk
+    ak = mesh.ak
+    detBk = mesh.detBk
+    points_ref, weights_ref = ref_quad.points, ref_quad.weights
+
+    I_L2 = 0.0
+    I_div = 0.0
+
+    shapef = shapef_2D_RT0FE(ref_quad)          # 2 x 3 x q (q numero punti di quadratura)
+    divshapef = divshapef_2D_RT0FE(ref_quad)    # 1 x 3 x q
+
+    for cell_index=1:n_tri
+        orientation = mesh.elems2orientation[:,cell_index]
+        
+        # Punti di quadratura sull'elemento reale
+        points_e = Bk[:, :, cell_index] * points_ref .+ ak[:, cell_index]
+        index_of_edges = mesh.elems2edges[:, cell_index]
+
+        Bk_cell = Bk[:,:,cell_index]
+        detBk_cell = mesh.detBk[cell_index]
+
+        # Loop sui punti di quadratura (q_point è un punto di quadratura sull'elemento reale)
+        for (q_index, q_point) in enumerate(eachcol(points_e))
+            # Get the quadrature weight
+            dΩ = weights_ref[q_index] * detBk_cell
+    
+            uh_eval = [0.0, 0.0]
+            div_uh_eval = 0.0
+
+            for i in 1:3
+                # Funzioni di base e loro divergenza su elemento di riferimento
+                phi_i_ref = shapef[:, i, q_index]
+                div_phi_i_ref = divshapef[1, i, q_index]
+    
+                # Trasformazioni di Piola
+                phi_i = orientation[i] / detBk_cell * Bk_cell * phi_i_ref
+                div_phi_i = orientation[i] / detBk_cell * div_phi_i_ref
+
+                dof_val = uh[index_of_edges[i]]
+
+                uh_eval .+= dof_val .* phi_i
+                div_uh_eval += dof_val * div_phi_i
+            end
+
+            u_exact = u(q_point)
+            divu_exact = divu(q_point)
+
+            # Errore (u - u_h)^2
+            err_u = sum((u_exact .- uh_eval).^2)
+            
+            # Errore (div(u) - div(u_h))^2
+            err_div = (divu_exact - div_uh_eval)^2
+            
+            I_L2 += err_u * dΩ
+            I_div += err_div * dΩ
+        end
+    end
+
+    return sqrt(I_L2 + I_div)
 end
